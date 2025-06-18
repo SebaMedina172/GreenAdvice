@@ -20,6 +20,7 @@ interface ApiResponse {
   recomendaciones: string
   ciudad: string
   planta: string
+  descripcion_clima?: string
 }
 
 export default function PlantCareApp() {
@@ -194,6 +195,11 @@ export default function PlantCareApp() {
                 <Leaf className="h-5 w-5" />
                 Recomendaciones para {result.planta} en {result.ciudad}
               </CardTitle>
+              {result.descripcion_clima && (
+                <p className="text-sm text-gray-600 mt-1 italic">
+                  Clima actual: {result.descripcion_clima}
+                </p>
+              )}
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               {/* Información del clima */}
