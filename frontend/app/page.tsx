@@ -1,19 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useRef } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Leaf, MapPin, Thermometer, Droplets } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Leaf, MapPin, Thermometer, Sun, Heart, History, Search, X, Loader2, Droplets } from "lucide-react"
 
-// Configuración de la API - Modifica aquí el endpoint base
+// Configuración de la API - Mantiene tu estructura actual
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-const RECOMMEND_ENDPOINT = "/api/recommend/" // Endpoint para recomendaciones
+const RECOMMEND_ENDPOINT = "/api/recommend/"
+const PLANTS_ENDPOINT = "/api/plants/"
 
-// Tipos para la respuesta de la API - Modifica según tu estructura JSON
+// Interfaces adaptadas para tu API actual
 interface ApiResponse {
   temperatura: number
   humedad: number
@@ -23,50 +25,223 @@ interface ApiResponse {
   descripcion_clima?: string
 }
 
-export default function PlantCareApp() {
-  // Estados del formulario
+// Interfaces del nuevo diseño (adaptadas)
+interface Plant {
+  value: string
+  label: string
+}
+
+interface FavoriteCity {
+  name: string
+  country: string
+  addedAt: string
+}
+
+interface HistoryItem {
+  plant: string
+  city: string
+  date: string
+  temperature: number
+  humidity: number
+}
+
+interface CityOption {
+  name: string
+  country: string
+  state?: string
+  display: string
+}
+
+// Función para procesar las recomendaciones de texto a arrays
+const processRecommendations = (text: string) => {
+  const lines = text.split('\n').filter(line => line.trim());
+  const alerts: string[] = [];
+  const recommendations: string[] = [];
+  
+  lines.forEach(line => {
+    const cleanLine = line.trim();
+    // Detectar alertas por palabras clave
+    if (cleanLine.toLowerCase().includes('cuidado') || 
+        cleanLine.toLowerCase().includes('atención') ||
+        cleanLine.toLowerCase().includes('importante') ||
+        cleanLine.toLowerCase().includes('evita') ||
+        cleanLine.toLowerCase().includes('no debes') ||
+        cleanLine.toLowerCase().includes('peligro') ||
+        cleanLine.toLowerCase().includes('riesgo')) {
+      alerts.push(cleanLine.replace(/^[-•*]\s*/, ''));
+    } else if (cleanLine.length > 0) {
+      recommendations.push(cleanLine.replace(/^[-•*]\s*/, ''));
+    }
+  });
+  
+  return { alerts, recommendations };
+};
+
+export default function PlantCareRecommender() {
+  // Estados principales
+  const [plants, setPlants] = useState<Plant[]>([])
   const [selectedPlant, setSelectedPlant] = useState<string>("")
   const [city, setCity] = useState<string>("")
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [result, setResult] = useState<ApiResponse | null>(null)
+  const [recommendation, setRecommendation] = useState<ApiResponse | null>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>("")
-  const [plants, setPlants] = useState<{ value: string; label: string }[]>([])
+  
+  // Estados para plantas
   const [plantsLoading, setPlantsLoading] = useState<boolean>(false)
   const [plantsError, setPlantsError] = useState<string>("")
+  
+  // Estados del nuevo diseño
+  const [favoriteCities, setFavoriteCities] = useState<FavoriteCity[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [cityOptions, setCityOptions] = useState<CityOption[]>([])
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
+  const [selectedCity, setSelectedCity] = useState<CityOption | null>(null)
+  const [citySearchLoading, setCitySearchLoading] = useState(false)
+  const cityInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    async function fetchPlants() {
-      setPlantsLoading(true)
-      setPlantsError("")
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/plants/`)
-        if (!res.ok) throw new Error(`Error ${res.status}`)
-        const data: { value: string; label: string }[] = await res.json()
-        setPlants(data)
-      } catch (e) {
-        console.error("Error cargando plantas:", e)
-        setPlantsError("No se pudo cargar la lista de plantas")
-      } finally {
-        setPlantsLoading(false)
-      }
-    }
     fetchPlants()
+    loadFavoriteCities()
+    loadHistory()
   }, [])
 
-  // Función para hacer la solicitud a la API
-  const handleGetRecommendation = async () => {
-    // Validación básica
-    if (!selectedPlant || !city.trim()) {
-      setError("Por favor selecciona una planta e ingresa una ciudad")
+  // Función para cargar plantas (mantiene tu lógica actual)
+  const fetchPlants = async () => {
+    setPlantsLoading(true)
+    setPlantsError("")
+    try {
+      const response = await fetch(`${API_BASE_URL}${PLANTS_ENDPOINT}`)
+      if (!response.ok) throw new Error(`Error ${response.status}`)
+      const data: Plant[] = await response.json()
+      setPlants(data)
+    } catch (e) {
+      console.error("Error cargando plantas:", e)
+      setPlantsError("No se pudo cargar la lista de plantas")
+      showToast("Error", "No se pudieron cargar las plantas", "destructive")
+    } finally {
+      setPlantsLoading(false)
+    }
+  }
+
+  // Funciones de almacenamiento local
+  const loadFavoriteCities = () => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("favoriteCities")
+      if (saved) {
+        setFavoriteCities(JSON.parse(saved))
+      }
+    }
+  }
+
+  const loadHistory = () => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("consultHistory")
+      if (saved) {
+        setHistory(JSON.parse(saved))
+      }
+    }
+  }
+
+  // Simulación de búsqueda de ciudades (puedes reemplazar con tu API real)
+  const searchCities = async (query: string) => {
+    if (query.length < 2) {
+      setCityOptions([])
+      setShowCityDropdown(false)
       return
     }
 
-    setIsLoading(true)
+    setCitySearchLoading(true)
+    
+    // Simulación de ciudades populares - reemplaza con tu API real
+    const mockCities = [
+      { name: "Buenos Aires", country: "Argentina", state: "Buenos Aires", display: "Buenos Aires, Argentina" },
+      { name: "Madrid", country: "España", display: "Madrid, España" },
+      { name: "Ciudad de México", country: "México", display: "Ciudad de México, México" },
+      { name: "Lima", country: "Perú", display: "Lima, Perú" },
+      { name: "Bogotá", country: "Colombia", display: "Bogotá, Colombia" },
+      { name: "Santiago", country: "Chile", display: "Santiago, Chile" },
+      { name: "Caracas", country: "Venezuela", display: "Caracas, Venezuela" },
+      { name: "Barcelona", country: "España", state: "Cataluña", display: "Barcelona, España" },
+      { name: "Montevideo", country: "Uruguay", display: "Montevideo, Uruguay" },
+      { name: "São Paulo", country: "Brasil", display: "São Paulo, Brasil" },
+    ]
+    
+    setTimeout(() => {
+      const filtered = mockCities.filter(city => 
+        city.name.toLowerCase().includes(query.toLowerCase()) ||
+        city.country.toLowerCase().includes(query.toLowerCase())
+      )
+      setCityOptions(filtered)
+      setShowCityDropdown(filtered.length > 0)
+      setCitySearchLoading(false)
+    }, 300)
+  }
+
+  const handleCitySelect = (cityOption: CityOption) => {
+    setSelectedCity(cityOption)
+    setCity(cityOption.display)
+    setShowCityDropdown(false)
+    setCityOptions([])
+  }
+
+  const handleCityInputChange = (value: string) => {
+    setCity(value)
+    setSelectedCity(null)
+    searchCities(value)
+  }
+
+  const clearCitySelection = () => {
+    setCity("")
+    setSelectedCity(null)
+    setShowCityDropdown(false)
+    setCityOptions([])
+    cityInputRef.current?.focus()
+  }
+
+  const saveFavoriteCity = () => {
+    if (!selectedCity || typeof window === 'undefined') return
+
+    const newFavorite: FavoriteCity = {
+      name: selectedCity.name,
+      country: selectedCity.country,
+      addedAt: new Date().toISOString(),
+    }
+    
+    const updated = [...favoriteCities.filter((f) => f.name !== selectedCity.name), newFavorite]
+    setFavoriteCities(updated)
+    localStorage.setItem("favoriteCities", JSON.stringify(updated))
+    showToast("Ciudad guardada", `${selectedCity.name} se agregó a tus favoritos`, "default")
+  }
+
+  const saveToHistory = (plant: string, city: string, temperature: number, humidity: number) => {
+    if (typeof window === 'undefined') return
+
+    const newItem: HistoryItem = {
+      plant,
+      city,
+      date: new Date().toISOString(),
+      temperature,
+      humidity,
+    }
+    const updated = [newItem, ...history.slice(0, 9)] // Mantener solo 10 elementos
+    setHistory(updated)
+    localStorage.setItem("consultHistory", JSON.stringify(updated))
+  }
+
+  // Función principal para obtener recomendación (mantiene tu lógica actual)
+  const getRecommendation = async () => {
+    if (!selectedPlant || !city.trim()) {
+      setError("Por favor selecciona una planta e ingresa una ciudad")
+      showToast("Campos requeridos", "Por favor selecciona una planta y una ciudad", "destructive")
+      return
+    }
+
+    setLoading(true)
     setError("")
-    setResult(null)
+    setRecommendation(null)
     
     try {
-      // Estructura del payload - Modifica según lo que espere tu API Django
+      // Mantiene tu estructura de payload actual
       const payload = {
         planta: selectedPlant,
         ciudad: city.trim(),
@@ -76,8 +251,6 @@ export default function PlantCareApp() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Agrega aquí headers adicionales si necesitas autenticación
-          // 'Authorization': 'Bearer your-token',
         },
         body: JSON.stringify(payload),
       })
@@ -87,147 +260,387 @@ export default function PlantCareApp() {
       }
 
       const data: ApiResponse = await response.json()
-      setResult(data)
+      setRecommendation(data)
+
+      // Guardar en historial
+      const plant = plants.find((p) => p.value === selectedPlant)
+      if (plant) {
+        saveToHistory(plant.label, data.ciudad, data.temperatura, data.humedad)
+      }
+
+      showToast("Recomendación generada", `Consejos para ${plant?.label} en ${data.ciudad}`, "default")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al obtener recomendaciones")
+      const errorMessage = err instanceof Error ? err.message : "Error al obtener recomendaciones"
+      setError(errorMessage)
+      showToast("Error", "No se pudo generar la recomendación", "destructive")
       console.error("Error en la solicitud:", err)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
+  // Función auxiliar para mostrar mensajes (simula toast)
+  const showToast = (title: string, description: string, variant: "default" | "destructive") => {
+    // En una implementación real usarías el hook useToast
+    console.log(`${variant === "destructive" ? "ERROR" : "INFO"}: ${title} - ${description}`)
+  }
+
+  const handleFavoriteCityClick = (fav: FavoriteCity) => {
+    const cityDisplay = `${fav.name}, ${fav.country}`
+    setCity(cityDisplay)
+    setSelectedCity({
+      name: fav.name,
+      country: fav.country,
+      display: cityDisplay,
+    })
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center py-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Leaf className="h-8 w-8 text-green-600" />
-            <h1 className="text-3xl font-bold text-green-800">PlantCare</h1>
+            <h1 className="text-4xl font-bold text-gray-800">PlantCare AI</h1>
           </div>
-          <p className="text-green-700 text-lg">Recomendaciones personalizadas para el cuidado de tus plantas</p>
+          <p className="text-lg text-gray-600">
+            Recomendaciones personalizadas de cuidado de plantas según el clima de tu ciudad
+          </p>
         </div>
 
-        {/* Formulario principal */}
-        <Card className="shadow-lg border-green-200">
-          <CardHeader className="bg-green-50 border-b border-green-200">
-            <CardTitle className="text-green-800 flex items-center gap-2">
-              <Leaf className="h-5 w-5" />
-              Obtener Recomendación
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            {/* Selector de planta */}
-            <div className="space-y-2">
-              <Label htmlFor="plant-select" className="text-green-700 font-medium">
-                Selecciona tu planta
-              </Label>
-              <Select value={selectedPlant} onValueChange={setSelectedPlant}>
-                <SelectTrigger className="border-green-300 focus:border-green-500">
-                  <SelectValue placeholder={plants.length ? "Elige una planta..." : plantsLoading ? "Cargando..." : "Sin opciones"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {plantsLoading ? (
-                    <SelectItem disabled value="">{`Cargando...`}</SelectItem>
-                  ) : plantsError ? (
-                    <SelectItem disabled value="">{plantsError}</SelectItem>
-                  ) : plants.length ? (
-                    plants.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>
-                        {p.label}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem disabled value="">{`Sin plantas disponibles`}</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+        <Tabs defaultValue="recommender" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="recommender">Recomendador</TabsTrigger>
+            <TabsTrigger value="favorites">Favoritos</TabsTrigger>
+            <TabsTrigger value="history">Historial</TabsTrigger>
+          </TabsList>
 
-            {/* Campo de ciudad */}
-            <div className="space-y-2">
-              <Label htmlFor="city-input" className="text-green-700 font-medium">
-                Ciudad
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-green-500" />
-                <Input
-                  id="city-input"
-                  type="text"
-                  placeholder="Ingresa tu ciudad..."
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="pl-10 border-green-300 focus:border-green-500"
-                />
-              </div>
-            </div>
+          <TabsContent value="recommender" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Leaf className="h-5 w-5" />
+                  Selecciona tu planta y ciudad
+                </CardTitle>
+                <CardDescription>
+                  Obtén recomendaciones personalizadas basadas en las condiciones climáticas actuales
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Planta</label>
+                    <Select value={selectedPlant} onValueChange={setSelectedPlant}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={plants.length ? "Selecciona una planta" : plantsLoading ? "Cargando..." : "Sin opciones"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plantsLoading ? (
+                          <SelectItem disabled value="loading">Cargando...</SelectItem>
+                        ) : plantsError ? (
+                          <SelectItem disabled value="error">{plantsError}</SelectItem>
+                        ) : plants.length ? (
+                          plants.map((plant) => (
+                            <SelectItem key={plant.value} value={plant.value}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{plant.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem disabled value="no-plants">Sin plantas disponibles</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* Botón de envío */}
-            <Button
-              onClick={handleGetRecommendation}
-              disabled={isLoading}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-medium"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Obteniendo recomendación...
-                </>
-              ) : (
-                "Obtener Recomendación"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Ciudad</label>
+                    <div className="relative">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input
+                            ref={cityInputRef}
+                            placeholder="Buscar ciudad..."
+                            value={city}
+                            onChange={(e) => handleCityInputChange(e.target.value)}
+                            onKeyPress={(e) => e.key === "Enter" && getRecommendation()}
+                            className={selectedCity ? "pr-8" : ""}
+                          />
+                          {citySearchLoading && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <Search className="h-4 w-4 animate-spin" />
+                            </div>
+                          )}
+                          {selectedCity && (
+                            <button
+                              onClick={clearCitySelection}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
 
-        {/* Área de error */}
-        {error && (
-          <Alert className="border-red-300 bg-red-50">
-            <AlertDescription className="text-red-700">{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Área de resultados */}
-        {result && (
-          <Card className="shadow-lg border-amber-200">
-            <CardHeader className="bg-amber-50 border-b border-amber-200">
-              <CardTitle className="text-amber-800 flex items-center gap-2">
-                <Leaf className="h-5 w-5" />
-                Recomendaciones para {result.planta} en {result.ciudad}
-              </CardTitle>
-              {result.descripcion_clima && (
-                <p className="text-sm text-gray-600 mt-1 italic">
-                  Clima actual: {result.descripcion_clima}
-                </p>
-              )}
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              {/* Información del clima */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <Thermometer className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-blue-700 font-medium">Temperatura</p>
-                    <p className="text-xl font-bold text-blue-800">{result.temperatura}°C</p>
+                          {showCityDropdown && cityOptions.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                              {cityOptions.map((cityOption, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handleCitySelect(cityOption)}
+                                  className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-medium">{cityOption.name}</div>
+                                      <div className="text-sm text-gray-500">
+                                        {cityOption.state ? `${cityOption.state}, ` : ""}
+                                        {cityOption.country}
+                                      </div>
+                                    </div>
+                                    <MapPin className="h-4 w-4 text-gray-400" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <Button onClick={getRecommendation} disabled={loading}>
+                          {loading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Analizando...
+                            </>
+                          ) : (
+                            "Analizar"
+                          )}
+                        </Button>
+                      </div>
+                      {selectedCity && (
+                        <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {selectedCity.display}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-cyan-50 rounded-lg border border-cyan-200">
-                  <Droplets className="h-6 w-6 text-cyan-600" />
-                  <div>
-                    <p className="text-sm text-cyan-700 font-medium">Humedad</p>
-                    <p className="text-xl font-bold text-cyan-800">{result.humedad}%</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Recomendaciones */}
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <h3 className="font-semibold text-green-800 mb-2">Recomendaciones de cuidado:</h3>
-                <p className="text-green-700 leading-relaxed">{result.recomendaciones}</p>
+                {favoriteCities.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Ciudades favoritas</label>
+                    <div className="flex flex-wrap gap-2">
+                      {favoriteCities.map((fav, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleFavoriteCityClick(fav)}
+                        >
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {fav.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Área de error */}
+            {error && (
+              <Alert className="border-red-300 bg-red-50">
+                <AlertDescription className="text-red-700">{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {recommendation && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Thermometer className="h-5 w-5" />
+                        Condiciones Climáticas
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={saveFavoriteCity}
+                        disabled={!selectedCity}
+                      >
+                        <Heart className="h-4 w-4" />
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Ubicación</span>
+                      <span className="font-medium">{recommendation.ciudad}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Temperatura</span>
+                      <span className="font-medium">{recommendation.temperatura}°C</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Humedad</span>
+                      <span className="font-medium">{recommendation.humedad}%</span>
+                    </div>
+                    {recommendation.descripcion_clima && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Condición</span>
+                        <span className="font-medium">{recommendation.descripcion_clima}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Leaf className="h-5 w-5" />
+                      {recommendation.planta}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <Thermometer className="h-6 w-6 text-blue-600" />
+                        <div>
+                          <p className="text-sm text-blue-700 font-medium">Temperatura</p>
+                          <p className="text-xl font-bold text-blue-800">{recommendation.temperatura}°C</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-4 bg-cyan-50 rounded-lg border border-cyan-200">
+                        <Droplets className="h-6 w-6 text-cyan-600" />
+                        <div>
+                          <p className="text-sm text-cyan-700 font-medium">Humedad</p>
+                          <p className="text-xl font-bold text-cyan-800">{recommendation.humedad}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sun className="h-5 w-5" />
+                      Recomendaciones Personalizadas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {(() => {
+                      const { alerts, recommendations } = processRecommendations(recommendation.recomendaciones);
+                      return (
+                        <>
+                          {alerts.length > 0 && (
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-red-600">⚠️ Alertas importantes:</h4>
+                              <ul className="space-y-1">
+                                {alerts.map((alert, index) => (
+                                  <li key={index} className="text-sm bg-red-50 p-2 rounded border-l-4 border-red-400">
+                                    {alert}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-green-600">💡 Consejos de cuidado:</h4>
+                            <ul className="space-y-1">
+                              {recommendations.map((rec, index) => (
+                                <li key={index} className="text-sm bg-green-50 p-2 rounded border-l-4 border-green-400">
+                                  {rec}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </TabsContent>
+
+          <TabsContent value="favorites">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5" />
+                  Ciudades Favoritas
+                </CardTitle>
+                <CardDescription>Tus ubicaciones guardadas para consultas rápidas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {favoriteCities.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">
+                    No tienes ciudades favoritas aún. Guarda una ciudad desde el recomendador.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {favoriteCities.map((fav, index) => (
+                      <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleFavoriteCityClick(fav)}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">{fav.name}</h3>
+                              <p className="text-sm text-gray-500">{fav.country}</p>
+                            </div>
+                            <MapPin className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">
+                            Agregada: {new Date(fav.addedAt).toLocaleDateString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Historial de Consultas
+                </CardTitle>
+                <CardDescription>Tus últimas recomendaciones generadas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {history.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No tienes consultas en tu historial aún.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {history.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Leaf className="h-4 w-4 text-green-600" />
+                          <div>
+                            <span className="font-medium">{item.plant}</span>
+                            <span className="text-gray-500 mx-2">en</span>
+                            <span className="font-medium">{item.city}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-sm text-gray-600">
+                            {item.temperature}°C, {item.humidity}%
+                          </div>
+                          <div className="text-sm text-gray-500">{new Date(item.date).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
