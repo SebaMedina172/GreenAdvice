@@ -8,6 +8,52 @@ from .models import Plant
 from .serializers import PlantSerializer, PlantDetailSerializer
 
 @api_view(["GET"])
+def geocode(request):
+    """
+    GET /api/geocode/?q=<texto>
+    Usa OpenWeather Geocoding API para sugerir ciudades.
+    """
+    q = request.query_params.get("q", "")
+    if len(q) < 2:
+        return Response([], status=status.HTTP_200_OK)
+    api_key = settings.OPENWEATHER_API_KEY
+    if not api_key:
+        return Response({"detail": "API key no configurada"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # Llamada a OpenWeather Geocoding (limit=5)
+    url = "http://api.openweathermap.org/geo/1.0/direct"
+    params = {"q": q, "limit": 5, "appid": api_key}
+    try:
+        resp = requests.get(url, params=params, timeout=5)
+        if resp.status_code != 200:
+            return Response([], status=status.HTTP_200_OK)
+        data = resp.json()  # lista de objetos con name, lat, lon, country, state (opcional)
+    except requests.RequestException:
+        return Response([], status=status.HTTP_200_OK)
+    # Transformar a formato de CityOption que espera el frontend
+    results = []
+    for item in data:
+        name = item.get("name")
+        country = item.get("country")
+        state = item.get("state")
+        lat = item.get("lat")
+        lon = item.get("lon")
+        # Construir display, p.e.: "Buenos Aires, Argentina"
+        display = name
+        if state:
+            display += f", {state}"
+        if country:
+            display += f", {country}"
+        results.append({
+            "name": name,
+            "country": country,
+            "state": state or "",
+            "display": display,
+            "lat": lat,
+            "lon": lon,
+        })
+    return Response(results)
+
+@api_view(["GET"])
 def plant_list(request):
     plants = Plant.objects.all()
     serializer = PlantSerializer(plants, many=True)
