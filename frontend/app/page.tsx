@@ -192,13 +192,19 @@ export default function PlantCareRecommender() {
     }
   }
 
+  const removeFavoriteCity = (cityName: string) => {
+    const updated = storageService.removeFavoriteCity(cityName)
+    setFavoriteCities(updated)
+    showToast("Ciudad eliminada", `${cityName} se eliminó de tus favoritos`, "default")
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Leaf className="h-8 w-8 text-green-600" />
-            <h1 className="text-4xl font-bold text-gray-800">PlantCare AI</h1>
+            <h1 className="text-4xl font-bold text-gray-800">GreenAdvice</h1>
           </div>
           <p className="text-lg text-gray-600">
             Recomendaciones personalizadas de cuidado de plantas según el clima de tu ciudad
@@ -251,7 +257,7 @@ export default function PlantCareRecommender() {
           </TabsContent>
 
           <TabsContent value="favorites">
-            <FavoritesTab favoriteCities={favoriteCities} onCityClick={handleFavoriteCityClick} />
+            <FavoritesTab favoriteCities={favoriteCities} onCityClick={handleFavoriteCityClick} onRemoveCity={removeFavoriteCity} />
           </TabsContent>
 
           <TabsContent value="history">

@@ -36,4 +36,11 @@ export const storageService = {
     this.saveFavoriteCities(updated)
     return updated
   },
+  
+  removeFavoriteCity(cityName: string): FavoriteCity[] {
+    const currentFavorites = this.getFavoriteCities()
+    const updated = currentFavorites.filter((f) => f.name !== cityName)
+    this.saveFavoriteCities(updated)
+    return updated
+  },
 }
