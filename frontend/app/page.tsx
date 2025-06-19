@@ -688,15 +688,68 @@ export default function PlantCareRecommender() {
                       <div
                         key={index}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => {
-                          setSelectedPlant(plants.find((p) => p.label === item.plant)?.value || "")
+                        onClick={async () => {
+                          // Limpiar recomendaciones anteriores
+                          setRecommendation(null)
+                          setError("")
+
+                          // Settear los campos
+                          const plantValue = plants.find((p) => p.label === item.plant)?.value || ""
+                          setSelectedPlant(plantValue)
                           setCity(item.city)
                           setSelectedCity({
                             name: item.city.split(",")[0],
                             country: item.city.split(",")[1]?.trim() || "",
                             display: item.city,
                           })
-                          showToast("Configuración restaurada", `Usando ${item.plant} en ${item.city}`, "default")
+                          showToast(
+                            "Configuración restaurada",
+                            `Regenerando recomendaciones para ${item.plant} en ${item.city}`,
+                            "default",
+                          )
+
+                          // Generar nueva consulta del historial
+                          if (plantValue && item.city) {
+                            setLoading(true)
+                            try {
+                              const payload = {
+                                planta: plantValue,
+                                ciudad: item.city.trim(),
+                              }
+
+                              const response = await fetch(`${API_BASE_URL}${RECOMMEND_ENDPOINT}`, {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify(payload),
+                              })
+
+                              if (!response.ok) {
+                                throw new Error(`Error ${response.status}: ${response.statusText}`)
+                              }
+
+                              const data: ApiResponse = await response.json()
+                              setRecommendation(data)
+
+                              showToast(
+                                "¡Recomendación actualizada!",
+                                `Datos actualizados para ${item.plant} en ${data.ciudad}`,
+                                "default",
+                              )
+                            } catch (err) {
+                              const errorMessage =
+                                err instanceof Error ? err.message : "Error al obtener recomendaciones"
+                              setError(errorMessage)
+                              showToast(
+                                "Error al actualizar",
+                                "No se pudieron cargar las recomendaciones del historial",
+                                "destructive",
+                              )
+                            } finally {
+                              setLoading(false)
+                            }
+                          }
                         }}
                       >
                         <div className="flex items-center gap-3">
