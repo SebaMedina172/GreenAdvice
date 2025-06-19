@@ -33,4 +33,6 @@ export interface CityOption {
   country: string
   state?: string
   display: string
+  lat: number
+  lon: number
 }
