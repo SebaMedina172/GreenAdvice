@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -9,8 +10,8 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 if not OPENWEATHER_API_KEY:
     print("⚠️ OPENWEATHER_API_KEY no fue cargada desde .env")
 
-print("BASE_DIR:", BASE_DIR)
-print("Cargando .env desde:", BASE_DIR / ".env", "-> exists?", (BASE_DIR / ".env").exists())
+# print("BASE_DIR:", BASE_DIR)
+# print("Cargando .env desde:", BASE_DIR / ".env", "-> exists?", (BASE_DIR / ".env").exists())
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "False") == "True"
@@ -48,11 +49,10 @@ CORS_ALLOWED_ORIGINS = [
     # Para producción: URL del Front en Vercel
 ]
 
+# Base de datos
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=False)
 }
 
 TEMPLATES = [
