@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Leaf, MapPin, Thermometer, Sun, Heart, History, Search, X, Loader2, Droplets } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { Toaster } from "@/components/ui/toaster"
 
 // Configuración de la API - Mantiene tu estructura actual
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -54,24 +56,80 @@ interface CityOption {
 
 // Función para procesar las recomendaciones de texto a arrays
 const processRecommendations = (text: string) => {
-  const lines = text.split('\n').filter(line => line.trim());
   const alerts: string[] = [];
   const recommendations: string[] = [];
   
+  // Función para dividir texto en oraciones respetando números decimales y rangos
+  const splitIntoSentences = (text: string) => {
+    // Reemplazar temporalmente puntos en números y rangos
+    let processedText = text
+      .replace(/(\d+)\.(\d+)/g, '$1DECIMAL$2') // 13.82 -> 13DECIMAL82
+      .replace(/(\d+)\.(\d+)°C/g, '$1DECIMAL$2°C') // 13.82°C -> 13DECIMAL82°C
+      .replace(/(\d+)\.(\d+)%/g, '$1DECIMAL$2%') // 50.0% -> 50DECIMAL0%
+      .replace(/(\d+)\.(\d+)–(\d+)\.(\d+)/g, '$1DECIMAL$2–$3DECIMAL$4'); // rangos como 10.0–29.0
+    
+    // Dividir por puntos seguidos de espacio y mayúscula, o final de línea
+    const sentences = processedText.split(/\.\s+(?=[A-Z])|\.$/);
+    
+    // Restaurar los puntos decimales
+    return sentences
+      .map(sentence => sentence.replace(/DECIMAL/g, '.').trim())
+      .filter(sentence => sentence.length > 5);
+  };
+  
+  // Dividir por líneas primero
+  const lines = text.split(/\r\n|\n/).filter(line => line.trim());
+  
   lines.forEach(line => {
     const cleanLine = line.trim();
-    // Detectar alertas por palabras clave
-    if (cleanLine.toLowerCase().includes('cuidado') || 
-        cleanLine.toLowerCase().includes('atención') ||
-        cleanLine.toLowerCase().includes('importante') ||
-        cleanLine.toLowerCase().includes('evita') ||
-        cleanLine.toLowerCase().includes('no debes') ||
-        cleanLine.toLowerCase().includes('peligro') ||
-        cleanLine.toLowerCase().includes('riesgo')) {
-      alerts.push(cleanLine.replace(/^[-•*]\s*/, ''));
-    } else if (cleanLine.length > 0) {
-      recommendations.push(cleanLine.replace(/^[-•*]\s*/, ''));
-    }
+    if (cleanLine.length === 0) return;
+    
+    // Dividir la línea en oraciones
+    const sentences = splitIntoSentences(cleanLine);
+    
+    sentences.forEach(sentence => {
+      const cleanSentence = sentence.trim();
+      if (cleanSentence.length === 0) return;
+      
+      // Palabras clave para alertas (condiciones fuera de rango o problemas)
+      const alertKeywords = [
+        'excede', 'supera', 'por encima', 'muy alta', 'muy baja', 'fuera del rango',
+        'no está dentro', 'por debajo', 'insuficiente', 'demasiado',
+        'evita', 'evitar', 'no debes', 'no exponer', 'riesgo', 'peligro',
+        'cuidado', 'atención', 'importante', 'precaución', 'advertencia',
+        'no tolera', 'puede dañar', 'daño', 'quemaduras'
+      ];
+      
+      // Palabras clave para condiciones positivas
+      const positiveKeywords = [
+        'dentro del rango ideal', 'está dentro del rango', 'rango ideal', 
+        'está bien', 'perfecto', 'adecuado', 'correcto', 'óptimo', 'apropiado'
+      ];
+      
+      const lowerSentence = cleanSentence.toLowerCase();
+      
+      // Verificar si contiene palabras de alerta
+      const hasAlert = alertKeywords.some(keyword => lowerSentence.includes(keyword));
+      
+      // Verificar si es una condición positiva
+      const isPositive = positiveKeywords.some(keyword => lowerSentence.includes(keyword));
+      
+      // Asegurar que termine con punto
+      const finalSentence = cleanSentence + (cleanSentence.endsWith('.') ? '' : '.');
+      
+      // Si contiene alerta, va a alertas
+      if (hasAlert) {
+        alerts.push(finalSentence);
+      } 
+      // Si es positivo Y no tiene alertas, va a recomendaciones
+      else if (isPositive) {
+        recommendations.push(finalSentence);
+      }
+      // Si no es ni alerta ni positivo, es una recomendación general
+      else {
+        recommendations.push(finalSentence);
+      }
+    });
   });
   
   return { alerts, recommendations };
@@ -99,13 +157,25 @@ export default function PlantCareRecommender() {
   const [citySearchLoading, setCitySearchLoading] = useState(false)
   const cityInputRef = useRef<HTMLInputElement>(null)
 
+  const { toast } = useToast()
+
+  // Función auxiliar para mostrar mensajes
+  const showToast = (title: string, description: string, variant: "default" | "destructive") => {
+    toast({
+      title,
+      description,
+      variant,
+      duration: variant === "destructive" ? 5000 : 3000, // Errores duran más tiempo
+    })
+  }
+
   useEffect(() => {
     fetchPlants()
     loadFavoriteCities()
     loadHistory()
   }, [])
 
-  // Función para cargar plantas (mantiene tu lógica actual)
+  // Función para cargar plantas
   const fetchPlants = async () => {
     setPlantsLoading(true)
     setPlantsError("")
@@ -142,7 +212,7 @@ export default function PlantCareRecommender() {
     }
   }
 
-  // Simulación de búsqueda de ciudades (puedes reemplazar con tu API real)
+  // Simulación de búsqueda de ciudades
   const searchCities = async (query: string) => {
     if (query.length < 2) {
       setCityOptions([])
@@ -196,6 +266,7 @@ export default function PlantCareRecommender() {
     setShowCityDropdown(false)
     setCityOptions([])
     cityInputRef.current?.focus()
+    showToast("Búsqueda limpiada", "Puedes buscar una nueva ciudad", "default")
   }
 
   const saveFavoriteCity = () => {
@@ -210,7 +281,7 @@ export default function PlantCareRecommender() {
     const updated = [...favoriteCities.filter((f) => f.name !== selectedCity.name), newFavorite]
     setFavoriteCities(updated)
     localStorage.setItem("favoriteCities", JSON.stringify(updated))
-    showToast("Ciudad guardada", `${selectedCity.name} se agregó a tus favoritos`, "default")
+    showToast("¡Ciudad guardada!", `${selectedCity.name} se agregó a tus favoritos`, "default")
   }
 
   const saveToHistory = (plant: string, city: string, temperature: number, humidity: number) => {
@@ -228,20 +299,21 @@ export default function PlantCareRecommender() {
     localStorage.setItem("consultHistory", JSON.stringify(updated))
   }
 
-  // Función principal para obtener recomendación (mantiene tu lógica actual)
+  // Función principal para obtener recomendación 
   const getRecommendation = async () => {
     if (!selectedPlant || !city.trim()) {
       setError("Por favor selecciona una planta e ingresa una ciudad")
-      showToast("Campos requeridos", "Por favor selecciona una planta y una ciudad", "destructive")
+      showToast("Campos requeridos", "Selecciona una planta y escribe el nombre de una ciudad", "destructive")
       return
     }
+
+    showToast("Generando recomendación...", "Analizando condiciones climáticas", "default")
 
     setLoading(true)
     setError("")
     setRecommendation(null)
     
     try {
-      // Mantiene tu estructura de payload actual
       const payload = {
         planta: selectedPlant,
         ciudad: city.trim(),
@@ -268,21 +340,15 @@ export default function PlantCareRecommender() {
         saveToHistory(plant.label, data.ciudad, data.temperatura, data.humedad)
       }
 
-      showToast("Recomendación generada", `Consejos para ${plant?.label} en ${data.ciudad}`, "default")
+      showToast("¡Recomendación lista!", `Consejos generados para ${plant?.label} en ${data.ciudad}`, "default")
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al obtener recomendaciones"
       setError(errorMessage)
-      showToast("Error", "No se pudo generar la recomendación", "destructive")
+      showToast("Error al generar recomendación", "Verifica tu conexión e intenta nuevamente", "destructive")
       console.error("Error en la solicitud:", err)
     } finally {
       setLoading(false)
     }
-  }
-
-  // Función auxiliar para mostrar mensajes (simula toast)
-  const showToast = (title: string, description: string, variant: "default" | "destructive") => {
-    // En una implementación real usarías el hook useToast
-    console.log(`${variant === "destructive" ? "ERROR" : "INFO"}: ${title} - ${description}`)
   }
 
   const handleFavoriteCityClick = (fav: FavoriteCity) => {
@@ -293,6 +359,7 @@ export default function PlantCareRecommender() {
       country: fav.country,
       display: cityDisplay,
     })
+    showToast("Ciudad seleccionada", `Usando ${fav.name} como ubicación`, "default")
   }
 
   return (
@@ -618,7 +685,20 @@ export default function PlantCareRecommender() {
                 ) : (
                   <div className="space-y-3">
                     {history.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => {
+                          setSelectedPlant(plants.find((p) => p.label === item.plant)?.value || "")
+                          setCity(item.city)
+                          setSelectedCity({
+                            name: item.city.split(",")[0],
+                            country: item.city.split(",")[1]?.trim() || "",
+                            display: item.city,
+                          })
+                          showToast("Configuración restaurada", `Usando ${item.plant} en ${item.city}`, "default")
+                        }}
+                      >
                         <div className="flex items-center gap-3">
                           <Leaf className="h-4 w-4 text-green-600" />
                           <div>
@@ -641,6 +721,7 @@ export default function PlantCareRecommender() {
             </Card>
           </TabsContent>
         </Tabs>
+        <Toaster />
       </div>
     </div>
   )
