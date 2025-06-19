@@ -70,12 +70,12 @@ def recommend(request):
     if humidity < plant.min_humidity:
         mensajes.append(f"La humedad actual ({humidity}%) está por debajo del rango ideal ({plant.min_humidity}%). Aumenta la frecuencia de riego o humedad ambiente.")
     elif humidity > plant.max_humidity:
-        mensajes.append(f"La humedad actual ({humidity}%) excede el rango ideal ({plant.max_humidity}%). Evita exceso de riego y mejora drenaje.")
+        mensajes.append(f"La humedad actual ({humidity}%) excede el rango ideal ({plant.max_humidity}%).")
     else:
         mensajes.append(f"La humedad actual ({humidity}%) está dentro del rango ideal ({plant.min_humidity}–{plant.max_humidity}%).")
-        
+
     # Instrucciones generales
-    mensajes.append(f"Instrucciones generales: {plant.care_instructions}")
+    mensajes.append(f"{plant.care_instructions}")
     recomendacion = " ".join(mensajes)
     result = {
         "temperatura": temp,
