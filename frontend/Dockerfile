@@ -1,51 +1,19 @@
-# Dockerfile para el frontend de PlantCare
-FROM node:18-alpine AS base
+FROM node:18-alpine
 
-# Instalar dependencias solo cuando sea necesario
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Instalar dependencias basadas en el gestor de paquetes preferido
+# Copia package.json y lock antes para cachear npm install
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
-# Reconstruir el código fuente solo cuando sea necesario
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copia el resto del código
 COPY . .
 
-# Configurar variables de entorno para el build
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN npm run build
-
-# Imagen de producción, copiar todos los archivos y ejecutar next
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/public ./public
-
-# Configurar permisos correctos para prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Copiar automáticamente archivos de salida basados en el tipo de build
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
+# Expone puerto (Next.js por defecto 3000)
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+# Anulamos ENTRYPOINT de la imagen base que quizá sea ["node"]
+ENTRYPOINT []
 
-CMD ["node", "server.js"]
+# CMD para producción: build y luego start
+CMD ["sh", "-c", "npm run build && npm run start"]
