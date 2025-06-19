@@ -9,5 +9,17 @@ class Plant(models.Model):
     max_humidity = models.FloatField(help_text="Humedad máxima ideal (%)")
     care_instructions = models.TextField(help_text="Instrucciones generales de cuidado")
 
+    # Nuevos campos
+    light_requirement = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Requerimiento de luz (ej. baja, media, alta)"
+    )
+    watering_frequency = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Frecuencia de riego recomendada (ej. diario, semanal)"
+    )
+
     def __str__(self):
         return self.name

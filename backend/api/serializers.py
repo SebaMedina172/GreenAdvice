@@ -13,4 +13,4 @@ class PlantSerializer(serializers.ModelSerializer):
 class PlantDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Plant
-        fields = ("id","name","slug","min_temp","max_temp","min_humidity","max_humidity","care_instructions")
+        fields = ("id","name","slug","min_temp","max_temp","min_humidity","max_humidity","care_instructions","light_requirement", "watering_frequency",)

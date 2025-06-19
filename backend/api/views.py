@@ -130,5 +130,11 @@ def recommend(request):
         "recomendaciones": recomendacion,
         "ciudad": city,
         "planta": plant.name,
+        "planta_temp_min": plant.min_temp,
+        "planta_temp_max": plant.max_temp,
+        "planta_humedad_min": plant.min_humidity,
+        "planta_humedad_max": plant.max_humidity,
+        "planta_light_requirement": plant.light_requirement,
+        "planta_watering_frequency": plant.watering_frequency,
     }
     return Response(result)
