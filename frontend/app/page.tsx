@@ -14,7 +14,7 @@ import { storageService } from "@/lib/services/storage"
 // Components
 import { RecommenderForm } from "@/components/greenadvice/recommender-form"
 import { ClimateCard } from "@/components/greenadvice/climate-card"
-import { PlantInfoCard } from "@/components/greenadvice/plant-info-card"
+import { PlantRequirementsCard } from "@/components/greenadvice/plant-requirements-card"
 import { RecommendationsCard } from "@/components/greenadvice/recommendations-card"
 import { FavoritesTab } from "@/components/greenadvice/favorites-tab"
 import { HistoryTab } from "@/components/greenadvice/history-tab"
@@ -250,7 +250,7 @@ export default function PlantCareRecommender() {
                   selectedCity={selectedCity}
                   onSaveFavorite={saveFavoriteCity}
                 />
-                <PlantInfoCard recommendation={recommendation} />
+                <PlantRequirementsCard recommendation={recommendation} />
                 <RecommendationsCard recommendation={recommendation} />
               </div>
             )}

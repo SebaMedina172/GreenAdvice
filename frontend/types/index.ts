@@ -6,6 +6,12 @@ export interface ApiResponse {
   ciudad: string
   planta: string
   descripcion_clima?: string
+  planta_temp_min: number
+  planta_temp_max: number
+  planta_humedad_min: number
+  planta_humedad_max: number
+  planta_luz_requerimiento?: string
+  planta_riego_frecuencia?: string
 }
 
 // Interfaces de la aplicación
