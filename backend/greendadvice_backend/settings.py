@@ -10,15 +10,26 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 if not OPENWEATHER_API_KEY:
     print("⚠️ OPENWEATHER_API_KEY no fue cargada desde .env")
 
-# print("BASE_DIR:", BASE_DIR)
-# print("Cargando .env desde:", BASE_DIR / ".env", "-> exists?", (BASE_DIR / ".env").exists())
-
 SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    SECRET_KEY = "fallback-secret-key-for-development-only-change-in-production"
+
 DEBUG = os.getenv("DEBUG", "False") == "True"
-ALLOWED_HOSTS = []
+
+# ALLOWED_HOSTS configurado desde variable de entorno
+ALLOWED_HOSTS = ["*"]
+print(f"🔍 ALLOWED_HOSTS configurado: {ALLOWED_HOSTS}")
+print(f"🔍 Valor crudo de variable: '{os.getenv('ALLOWED_HOSTS')}'")
+print(f"🔍 DEBUG: {DEBUG}")
+print(f"🔍 DATABASE_URL: {os.getenv('DATABASE_URL', 'Not set')}")
+print(f"🔍 PORT: {os.getenv('PORT', 'Not set')}")
 
 ROOT_URLCONF = "greendadvice_backend.urls"
 WSGI_APPLICATION = "greendadvice_backend.wsgi.application"
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://greenadvice-backend-app.azurewebsites.net',
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -36,13 +47,14 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware", 
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    ]
+]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -58,7 +70,7 @@ DATABASES = {
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],  # Podés agregar rutas personalizadas a tus templates si los usás
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -71,7 +83,48 @@ TEMPLATES = [
     },
 ]
 
-# URL base para servir archivos estáticos en desarrollo
+# Configuración de archivos estáticos
 STATIC_URL = '/static/'
-# Opcionalmente, para producción con collectstatic:
-# STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Configuración adicional para WhiteNoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+#directorio de archivos estáticos
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+# Configuración de logging para Azure
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
