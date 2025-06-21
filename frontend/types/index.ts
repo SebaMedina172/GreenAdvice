@@ -10,8 +10,8 @@ export interface ApiResponse {
   planta_temp_max: number
   planta_humedad_min: number
   planta_humedad_max: number
-  planta_luz_requerimiento?: string
-  planta_riego_frecuencia?: string
+  planta_light_requirement?: string
+  planta_watering_frequency?: string
 }
 
 // Interfaces de la aplicación

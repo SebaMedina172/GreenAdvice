@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Leaf, Sun, Droplets, Thermometer, Wind } from "lucide-react"
+import { Leaf, Sun, Droplets, Thermometer, CalendarDays  } from "lucide-react"
 import type { ApiResponse } from "@/types"
 
 interface PlantRequirementsCardProps {
@@ -37,22 +37,22 @@ export function PlantRequirementsCard({ recommendation }: PlantRequirementsCardP
             </div>
           </div>
 
-          {recommendation.planta_luz_requerimiento && (
+          {recommendation.planta_light_requirement && (
             <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <Sun className="h-5 w-5 text-yellow-600" />
               <div>
                 <p className="text-sm text-yellow-700 font-medium">Requerimiento de Luz</p>
-                <p className="text-sm font-semibold text-yellow-800">{recommendation.planta_luz_requerimiento}</p>
+                <p className="text-sm font-semibold text-yellow-800">{recommendation.planta_light_requirement}</p>
               </div>
             </div>
           )}
 
-          {recommendation.planta_riego_frecuencia && (
+          {recommendation.planta_watering_frequency && (
             <div className="flex items-center gap-3 p-3 bg-cyan-50 rounded-lg border border-cyan-200">
-              <Wind className="h-5 w-5 text-cyan-600" />
+              <CalendarDays  className="h-5 w-5 text-cyan-600" />
               <div>
                 <p className="text-sm text-cyan-700 font-medium">Frecuencia de Riego</p>
-                <p className="text-sm font-semibold text-cyan-800">{recommendation.planta_riego_frecuencia}</p>
+                <p className="text-sm font-semibold text-cyan-800">{recommendation.planta_watering_frequency}</p>
               </div>
             </div>
           )}
