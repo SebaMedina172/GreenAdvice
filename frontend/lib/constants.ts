@@ -1,5 +1,12 @@
 // Configuración de la API
+// Debug temporal
+console.log("Environment variables:", {
+  NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  NODE_ENV: process.env.NODE_ENV
+})
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
+console.log("Final API_BASE_URL:", API_BASE_URL)
 export const RECOMMEND_ENDPOINT = "/api/recommend/"
 export const PLANTS_ENDPOINT = "/api/plants/"
 
