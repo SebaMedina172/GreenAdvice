@@ -61,6 +61,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://ashy-forest-0cc20d610.1.azurestaticapps.net",
 ]
+print(f"🔍 CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}")
+print(f"🔍 CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 # Base de datos
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
