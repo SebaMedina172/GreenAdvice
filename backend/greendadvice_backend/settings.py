@@ -26,6 +26,9 @@ print(f"🔍 PORT: {os.getenv('PORT', 'Not set')}")
 
 ROOT_URLCONF = "greendadvice_backend.urls"
 WSGI_APPLICATION = "greendadvice_backend.wsgi.application"
+# Temporal - para debug
+CORS_ALLOW_ALL_ORIGINS = True
+print(">>> DEBUG: estamos usando CORS_ALLOW_ALL_ORIGINS =", True)
 
 CSRF_TRUSTED_ORIGINS = [
     'https://greenadvice-backend-app.azurewebsites.net',
