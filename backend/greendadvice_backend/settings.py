@@ -29,6 +29,7 @@ WSGI_APPLICATION = "greendadvice_backend.wsgi.application"
 
 CSRF_TRUSTED_ORIGINS = [
     'https://greenadvice-backend-app.azurewebsites.net',
+    'https://ashy-forest-0cc20d610.1.azurestaticapps.net',
 ]
 
 INSTALLED_APPS = [
@@ -58,7 +59,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    # Para producción: URL del Front en Vercel
+    "https://ashy-forest-0cc20d610.1.azurestaticapps.net",
 ]
 
 # Base de datos
