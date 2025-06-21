@@ -3,3 +3,11 @@ __pycache__
 db.sqlite3
 
 .env
+
+api_fixture.json
+
+staticfiles/
+
+api/migrations/0002_plant_light_requirement_plant_watering_frequency.py
+
+greendadvice_backend/__pycache__/settings.cpython-310.pyc
