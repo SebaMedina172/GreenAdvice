@@ -18,11 +18,6 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # ALLOWED_HOSTS configurado desde variable de entorno
 ALLOWED_HOSTS = ["*"]
-print(f"🔍 ALLOWED_HOSTS configurado: {ALLOWED_HOSTS}")
-print(f"🔍 Valor crudo de variable: '{os.getenv('ALLOWED_HOSTS')}'")
-print(f"🔍 DEBUG: {DEBUG}")
-print(f"🔍 DATABASE_URL: {os.getenv('DATABASE_URL', 'Not set')}")
-print(f"🔍 PORT: {os.getenv('PORT', 'Not set')}")
 
 ROOT_URLCONF = "greendadvice_backend.urls"
 WSGI_APPLICATION = "greendadvice_backend.wsgi.application"
@@ -61,8 +56,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://ashy-forest-0cc20d610.1.azurestaticapps.net",
 ]
-print(f"🔍 CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}")
-print(f"🔍 CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 # Base de datos
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
