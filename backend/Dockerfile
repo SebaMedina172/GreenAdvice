@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8000
 
 # Comando simple para producción
-CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn greendadvice_backend.wsgi:application --bind 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py createsuperuser --noinput --username $DJANGO_SUPERUSER_USERNAME --email $DJANGO_SUPERUSER_EMAIL || true && gunicorn greendadvice_backend.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
