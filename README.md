@@ -56,7 +56,7 @@ Este README describe cómo instalar, ejecutar, probar y desplegar GreenAdvice, a
 ## Demo
 
 - **Backend (Azure)**: https://plantcare-backend-app.azurewebsites.net/api/plants/
-- **Frontend (Azure Static/Web App o contenedor)**: https://ashy-forest-0cc20d610.1.azurestaticapps.net/
+- **Frontend (Azure Static/Web App o contenedor)**: https://green-advice.vercel.app/
 
 > **Nota:** El dominio real dependerá del despliegue. Esta solo es una demo par ver las funcionalidades y como seria la app desplegada en produccion.
 
